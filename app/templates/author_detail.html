@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Author: {{ author.name }}{% endblock %}
+{% block content %}
+<h1 class="mb-3">👤 {{ author.name }}</h1>
+<p><strong>🎂 Birthdate:</strong> {{ author.birthdate }}</p>
+
+<h3 class="mt-4">📚 Books by {{ author.name }}</h3>
+<ul class="list-group">
+  {% for book in author.books.all %}
+  <li class="list-group-item">{{ book.title }} ({{ book.published_year }}) - {{ book.genre }}</li>
+  {% empty %}
+  <li class="list-group-item">No books found.</li>
+  {% endfor %}
+</ul>
+<a href="{% url 'book_list' %}" class="btn btn-secondary mt-3">↩ Back to Book List</a>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}Books{% endblock %}
+{% block content %}
+<h1 class="mb-4">Book Collection</h1>
+<div class="card p-4 mb-4">
+  <form method="get" class="row g-3">
+    <div class="col-md-4">
+      <label for="author" class="form-label">Filter by Author</label>
+      <select name="author" class="form-select" id="author">
+        <option value="">All Authors</option>
+        {% for author in authors %}
+        <option value="{{ author.id }}" {% if request.GET.author == author.id|stringformat:'s' %}selected{% endif %}>{{ author.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label for="genre" class="form-label">Filter by Genre</label>
+      <select name="genre" class="form-select" id="genre">
+        <option value="">All Genres</option>
+        {% for g in genres %}
+        <option value="{{ g }}" {% if request.GET.genre == g %}selected{% endif %}>{{ g }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4 d-flex align-items-end">
+      <button type="submit" class="btn btn-primary me-2">🔍 Filter</button>
+      <a href="{% url 'book_add' %}" class="btn btn-success">➕ Add Book</a>
+    </div>
+  </form>
+</div>
+
+<div class="card p-4">
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>📖 Title</th>
+        <th>👤 Author</th>
+        <th>🏷️ Genre</th>
+        <th>⚙️ Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for book in books %}
+      <tr>
+        <td>{{ book.title }}</td>
+        <td><a href="{% url 'author_detail' book.author.id %}">{{ book.author.name }}</a></td>
+        <td>{{ book.genre }}</td>
+        <td>
+          <a href="{% url 'book_edit' book.id %}" class="btn btn-sm btn-warning">✏️ Edit</a>
+          <a href="{% url 'book_delete' book.id %}" class="btn btn-sm btn-danger">🗑️ Delete</a>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if books|length == 0 %}
+      <tr><td colspan="4" class="text-center">😕 No books found.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
