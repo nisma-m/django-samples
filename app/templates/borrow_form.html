@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Borrow Book{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">➕ Borrow Book</h1>
+
+<div class="card p-4">
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="mb-3">
+      {{ form.name.label_tag }}
+      {{ form.name }}
+    </div>
+
+    <div class="mb-3">
+      {{ form.email.label_tag }}
+      {{ form.email }}
+    </div>
+
+    <div class="mb-3">
+      {{ form.book.label_tag }}
+      {{ form.book }}
+    </div>
+
+    <div class="mb-3">
+      {{ form.borrow_date.label_tag }}
+      {{ form.borrow_date }}
+    </div>
+
+    <button type="submit" class="btn btn-primary">📚 Borrow</button>
+    <a href="{% url 'borrower_list' %}" class="btn btn-secondary">↩ Back</a>
+  </form>
+</div>
+{% endblock %}
