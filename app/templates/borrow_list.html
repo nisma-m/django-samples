@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block title %}Borrowings{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">📄 Current Borrowings</h1>
+
+<a href="{% url 'book_list' %}" class="btn btn-secondary mb-3">↩ Back to Book List</a>
+
+<div class="card p-4 mb-4">
+  <form method="get" class="row g-3">
+    <div class="col-md-4">
+      <label for="book" class="form-label">Filter by Book</label>
+      <select name="book" id="book" class="form-select">
+        <option value="">All Books</option>
+        {% for book in books %}
+          <option value="{{ book.id }}" {% if request.GET.book == book.id|stringformat:"s" %}selected{% endif %}>
+            {{ book.title }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-4">
+      <label for="name" class="form-label">Filter by Borrower</label>
+      <input type="text" name="name" id="name" class="form-control"
+             value="{{ request.GET.name }}" placeholder="Enter borrower name">
+    </div>
+
+    <div class="col-md-2 d-flex align-items-end">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="active" value="1" id="active"
+               {% if request.GET.active %}checked{% endif %}>
+        <label class="form-check-label" for="active">📌 Only Active</label>
+      </div>
+    </div>
+
+    <div class="col-md-2 d-flex align-items-end">
+      <button type="submit" class="btn btn-primary w-100">🔍 Filter</button>
+    </div>
+  </form>
+</div>
+
+<div class="card p-4">
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>👤 Borrower</th>
+        <th>📧 Email</th>
+        <th>📖 Book</th>
+        <th>📅 Borrow Date</th>
+        <th>📅 Return Date</th>
+        <th>✅ Status</th>
+        <th>⚙️ Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in borrowers %}
+      <tr>
+        <td>{{ b.name }}</td>
+        <td>{{ b.email }}</td>
+        <td>{{ b.book.title }}</td>
+        <td>{{ b.borrow_date }}</td>
+        <td>
+          {% if b.return_date %}
+            {{ b.return_date }}
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if b.return_date %}
+            <span class="badge bg-success">Returned</span>
+          {% else %}
+            <span class="badge bg-danger">Not Returned</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if not b.return_date %}
+            <a href="{% url 'mark_returned' b.id %}" class="btn btn-sm btn-outline-success">✔️ Mark as Returned</a>
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="text-center text-muted">😕 No borrowings found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
