@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}PDF Library{% endblock %}
+{% block content %}
+<h1 class="mb-4 d-flex justify-content-between align-items-center">
+  📚 Uploaded PDFs
+  <a href="{% url 'book_list' %}" class="btn btn-outline-secondary btn-sm">↩ Back to Book List</a>
+</h1>
+
+<form method="get" class="mb-3">
+  <input type="text" name="q" class="form-control" placeholder="🔍 Search by title or author" value="{{ request.GET.q }}">
+</form>
+
+<div class="card p-4">
+  <table class="table table-hover">
+    <thead class="table-light">
+      <tr>
+        <th>📄 Title</th>
+        <th>👤 Author</th>
+        <th>📅 Uploaded At</th>
+        <th>📦 Size</th>
+        <th>🔗 Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pdf in pdfs %}
+      <tr>
+        <td>{{ pdf.title }}</td>
+        <td>{{ pdf.author }}</td>
+        <td>{{ pdf.uploaded_at|date:"Y-m-d H:i" }}</td>
+        <td>
+          {% with pdf.pdf_file.size|filesizeformat as size %}
+            {{ size }}
+          {% endwith %}
+        </td>
+        <td>
+          <a href="{{ pdf.pdf_file.url }}" class="btn btn-sm btn-info" target="_blank">📖 View</a>
+          <a href="{{ pdf.pdf_file.url }}" class="btn btn-sm btn-success" download>⬇️ Download</a>
+          <a href="{% url 'pdf_delete' pdf.id %}" class="btn btn-sm btn-danger">🗑️ Delete</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-center">😕 No PDFs uploaded.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

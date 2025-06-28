@@ -1,3 +1,6 @@
+
+
+
 {% extends 'base.html' %}
 {% block title %}Books{% endblock %}
 {% block content %}
@@ -27,10 +30,12 @@
       </select>
     </div>
 
-    <div class="col-md-4 d-flex align-items-end">
-      <button type="submit" class="btn btn-primary me-2">🔍 Filter</button>
-      <a href="{% url 'book_add' %}" class="btn btn-success me-2">➕ Add Book</a>
-      <a href="{% url 'borrow_book' %}" class="btn btn-outline-info">📚 Borrow Book</a>
+    <div class="col-md-4 d-flex flex-wrap align-items-end">
+      <button type="submit" class="btn btn-primary me-2 mb-2">🔍 Filter</button>
+      <a href="{% url 'book_add' %}" class="btn btn-success me-2 mb-2">➕ Add Book</a>
+      <a href="{% url 'borrow_book' %}" class="btn btn-outline-info me-2 mb-2">📚 Borrow Book</a>
+      <a href="{% url 'pdf_upload' %}" class="btn btn-dark me-2 mb-2">📤 Upload PDF</a>
+      <a href="{% url 'pdf_list' %}" class="btn btn-outline-secondary mb-2">📂 View PDFs</a>
     </div>
   </form>
 </div>

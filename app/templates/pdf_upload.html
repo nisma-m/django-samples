@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Upload PDF{% endblock %}
+{% block content %}
+<h1 class="mb-4">➕ Upload PDF</h1>
+<div class="card p-4">
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">📤 Upload</button>
+    <a href="{% url 'pdf_list' %}" class="btn btn-secondary">📚 View PDFs</a>
+  </form>
+</div>
+{% endblock %}
