@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Book, Author, Borrower
-from .forms import BookForm, BorrowerForm
+from django.urls import reverse
+from .models import Book, Author, Borrower , PDFBook
+from .forms import BookForm, BorrowerForm,PDFBookForm
 from datetime import date
 from django.db.models import Q
 
@@ -56,12 +57,21 @@ def book_update(request, pk):
 
 
 # 🗑️ Delete Book
+# def book_delete(request, pk):
+#     book = get_object_or_404(Book, pk=pk)
+#     if request.method == 'POST':
+#         book.delete()
+#         return redirect('book_list')
+#     return render(request, 'book_confirm_delete.html', {'book': book})
 def book_delete(request, pk):
     book = get_object_or_404(Book, pk=pk)
     if request.method == 'POST':
         book.delete()
         return redirect('book_list')
-    return render(request, 'book_confirm_delete.html', {'book': book})
+    return render(request, 'confirm_delete.html', {
+        'object': book,
+        'cancel_url': reverse('book_list')
+    })
 
 
 # 👤 Author Detail Page
@@ -108,3 +118,34 @@ def mark_returned(request, pk):
     borrower.return_date = date.today()  # Automatically set return date here
     borrower.save()
     return redirect('borrower_list')
+
+def upload_pdf(request):
+    if request.method == 'POST':
+        form = PDFBookForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect('pdf_list')
+    else:
+        form = PDFBookForm()
+    return render(request, 'pdf_upload.html', {'form': form})
+
+
+def pdf_list(request):
+    query = request.GET.get('q')
+    pdfs = PDFBook.objects.all()
+
+    if query:
+        pdfs = pdfs.filter(title__icontains=query) | pdfs.filter(author__icontains=query)
+
+    return render(request, 'pdf_list.html', {'pdfs': pdfs})
+
+def pdf_delete(request, pk):
+    pdf = get_object_or_404(PDFBook, pk=pk)
+    if request.method == 'POST':
+        pdf.pdf_file.delete()
+        pdf.delete()
+        return redirect('pdf_list')
+    return render(request, 'confirm_delete.html', {
+        'object': pdf,
+        'cancel_url': reverse('pdf_list')
+    })

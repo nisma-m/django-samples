@@ -1,5 +1,5 @@
 from django import forms
-from .models import Book,Borrower
+from .models import Book,Borrower,PDFBook
 
 class BookForm(forms.ModelForm):
     class Meta:
@@ -38,3 +38,8 @@ class BorrowerForm(forms.ModelForm):
 
         for field in self.fields:
             self.fields[field].widget.attrs.update({'class': 'form-control'})
+
+class PDFBookForm(forms.ModelForm):
+    class Meta:
+        model = PDFBook
+        fields = ['title', 'author', 'pdf_file']

@@ -40,3 +40,13 @@ class Borrower(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.book.title}"
+
+
+class PDFBook(models.Model):
+    title = models.CharField(max_length=200)
+    author = models.CharField(max_length=100)
+    pdf_file = models.FileField(upload_to='pdfs/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title

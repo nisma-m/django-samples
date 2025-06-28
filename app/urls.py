@@ -10,5 +10,9 @@ urlpatterns = [
     path('borrow/', views.borrow_book, name='borrow_book'),
     path('borrowings/', views.borrower_list, name='borrower_list'),
     path('borrow/return/<int:pk>/', views.mark_returned, name='mark_returned'),
+    path('upload/', views.upload_pdf, name='pdf_upload'),
+    path('pdfs/', views.pdf_list, name='pdf_list'),
+    path('pdfs/delete/<int:pk>/', views.pdf_delete, name='pdf_delete'),
+
 ]
 
