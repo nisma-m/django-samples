@@ -1,5 +1,7 @@
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import User
+
 
 
 class Author(models.Model):
@@ -50,3 +52,12 @@ class PDFBook(models.Model):
 
     def __str__(self):
         return self.title
+    
+class DownloadLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    pdf = models.ForeignKey(PDFBook, on_delete=models.CASCADE)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    ip_address = models.GenericIPAddressField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.user} - {self.pdf.title} - {self.timestamp}"

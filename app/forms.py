@@ -1,5 +1,7 @@
 from django import forms
 from .models import Book,Borrower,PDFBook
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
 
 class BookForm(forms.ModelForm):
     class Meta:
@@ -43,3 +45,34 @@ class PDFBookForm(forms.ModelForm):
     class Meta:
         model = PDFBook
         fields = ['title', 'author', 'pdf_file']
+
+
+
+
+class SimpleUserCreationForm(UserCreationForm):
+    class Meta:
+        model = User
+        fields = ['username', 'password1', 'password2']
+        widgets = {
+            'username': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '👤 Username',
+                'autocomplete': 'off'
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields['username'].help_text = None
+        self.fields['password1'].help_text = None
+        self.fields['password2'].help_text = None
+
+        self.fields['password1'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': '🔒 Password'
+        })
+        self.fields['password2'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': '🔒 Confirm Password'
+        })

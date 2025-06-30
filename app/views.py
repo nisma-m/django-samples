@@ -1,11 +1,20 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
-from .models import Book, Author, Borrower , PDFBook
-from .forms import BookForm, BorrowerForm,PDFBookForm
-from datetime import date
+from .models import Book, Author, Borrower , PDFBook , DownloadLog
+from .forms import BookForm, BorrowerForm,PDFBookForm ,SimpleUserCreationForm
+from datetime import date , timedelta
 from django.db.models import Q
+from django.contrib.auth.decorators import login_required
+from django.utils.timezone import now
+from django.contrib import messages
+from django.db.models import Count
+from django.contrib.auth.decorators import login_required
+from django.http import FileResponse, Http404
+import os
+
 
 # 📚 Book List - shows only available books
+@login_required
 def book_list(request):
     books = Book.objects.select_related('author').all()
     authors = Author.objects.all()
@@ -149,3 +158,76 @@ def pdf_delete(request, pk):
         'object': pdf,
         'cancel_url': reverse('pdf_list')
     })
+
+
+
+def get_client_ip(request):
+    # Safely extract user's IP address
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0]
+    return request.META.get("REMOTE_ADDR")
+
+
+@login_required
+def download_pdf(request, pk):
+    pdf = get_object_or_404(PDFBook, pk=pk)
+
+    # Limit: 3 downloads per day
+    today = now().date()
+    downloads_today = DownloadLog.objects.filter(
+        user=request.user,
+        timestamp__date=today
+    ).count()
+
+    if downloads_today >= 3:
+        messages.error(request, "🚫 You’ve reached your daily limit of 3 downloads.")
+        return redirect('pdf_list')
+
+    # Log download
+    DownloadLog.objects.create(
+        user=request.user,
+        pdf=pdf,
+        ip_address=get_client_ip(request)
+    )
+
+    # Force download with proper headers
+    file_path = pdf.pdf_file.path
+    if not os.path.exists(file_path):
+        raise Http404("File not found.")
+
+    return FileResponse(
+        open(file_path, 'rb'),
+        as_attachment=True,
+        filename=os.path.basename(file_path)
+    )
+
+
+
+@login_required
+def dashboard(request):
+    top_pdfs = DownloadLog.objects.values('pdf__title').annotate(
+        total=Count('pdf')
+    ).order_by('-total')[:5]
+
+    # Calculate max to avoid division in template
+    max_downloads = top_pdfs[0]['total'] if top_pdfs else 1
+
+    # Precompute percentages
+    for pdf in top_pdfs:
+        pdf['percent'] = round((pdf['total'] / max_downloads) * 100)
+
+    return render(request, 'dashboard.html', {
+        'top_pdfs': top_pdfs
+    })
+
+def signup_view(request):
+    if request.method == 'POST':
+        form = SimpleUserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Account created! You can now log in.')
+            return redirect('login')
+    else:
+        form = SimpleUserCreationForm()
+    return render(request, 'registration/signup.html', {'form': form})

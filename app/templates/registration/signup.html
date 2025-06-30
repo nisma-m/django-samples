@@ -1,0 +1,29 @@
+{% extends 'base_plain.html' %}
+{% block title %}Sign Up{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+  <div class="card shadow p-4" style="max-width: 400px; width: 100%; border-radius: 15px;">
+    <h3 class="mb-4 text-center">📝 Create Your BookApp Account</h3>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="mb-3">
+          {{ field }}
+          {% if field.errors %}
+            <div class="text-danger small">{{ field.errors|striptags }}</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+      <div class="d-grid">
+        <button type="submit" class="btn btn-success">✅ Sign Up</button>
+      </div>
+    </form>
+
+    <div class="text-center mt-3">
+      <small>Already have an account? <a href="{% url 'login' %}">Login</a></small>
+    </div>
+  </div>
+</div>
+{% endblock %}

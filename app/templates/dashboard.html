@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">📊 Top 5 Most Downloaded PDFs</h1>
+
+<div class="card p-4 shadow-sm">
+  {% if top_pdfs %}
+    {% for pdf in top_pdfs %}
+      <div class="mb-3">
+        <div class="d-flex justify-content-between">
+          <strong>{{ pdf.pdf__title }}</strong>
+          <span class="text-muted">{{ pdf.total }} downloads</span>
+        </div>
+        <div class="progress mt-1" style="height: 20px;">
+          <div class="progress-bar bg-success" role="progressbar"
+               style="width: {{ pdf.percent }}%;"
+               aria-valuenow="{{ pdf.total }}"
+               aria-valuemin="0"
+               aria-valuemax="100">
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="text-muted">😕 No downloads yet.</p>
+  {% endif %}
+</div>
+{% endblock %}
