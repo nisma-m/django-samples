@@ -206,20 +206,24 @@ def download_pdf(request, pk):
 
 @login_required
 def dashboard(request):
-    top_pdfs = DownloadLog.objects.values('pdf__title').annotate(
+    top_pdfs_raw = DownloadLog.objects.values('pdf__title').annotate(
         total=Count('pdf')
     ).order_by('-total')[:5]
 
-    # Calculate max to avoid division in template
-    max_downloads = top_pdfs[0]['total'] if top_pdfs else 1
+    # Get max value for calculating percentage
+    max_total = top_pdfs_raw[0]['total'] if top_pdfs_raw else 1
 
-    # Precompute percentages
-    for pdf in top_pdfs:
-        pdf['percent'] = round((pdf['total'] / max_downloads) * 100)
+    # Add percent key to each PDF entry
+    top_pdfs = []
+    for pdf in top_pdfs_raw:
+        percent = int((pdf['total'] / max_total) * 100)
+        top_pdfs.append({
+            'pdf__title': pdf['pdf__title'],
+            'total': pdf['total'],
+            'percent': percent,
+        })
 
-    return render(request, 'dashboard.html', {
-        'top_pdfs': top_pdfs
-    })
+    return render(request, 'dashboard.html', {'top_pdfs': top_pdfs})
 
 def signup_view(request):
     if request.method == 'POST':
