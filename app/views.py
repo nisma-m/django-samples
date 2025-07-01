@@ -4,13 +4,17 @@ from .models import Book, Author, Borrower , PDFBook , DownloadLog
 from .forms import BookForm, BorrowerForm,PDFBookForm ,SimpleUserCreationForm
 from datetime import date , timedelta
 from django.db.models import Q
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.utils.timezone import now
 from django.contrib import messages
 from django.db.models import Count
 from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, Http404
 import os
+from django.contrib.auth import login
+ 
+def is_librarian(user):
+    return user.groups.filter(name='Librarian').exists()
 
 
 # 📚 Book List - shows only available books
@@ -41,6 +45,7 @@ def book_list(request):
 
 
 # ➕ Add Book
+@user_passes_test(is_librarian)
 def book_create(request):
     if request.method == 'POST':
         form = BookForm(request.POST)
@@ -128,6 +133,9 @@ def mark_returned(request, pk):
     borrower.save()
     return redirect('borrower_list')
 
+
+
+@user_passes_test(is_librarian)
 def upload_pdf(request):
     if request.method == 'POST':
         form = PDFBookForm(request.POST, request.FILES)
@@ -168,30 +176,31 @@ def get_client_ip(request):
         return x_forwarded_for.split(",")[0]
     return request.META.get("REMOTE_ADDR")
 
-
+#this is give unlimited download access to librarian and limited for normal
 @login_required
 def download_pdf(request, pk):
     pdf = get_object_or_404(PDFBook, pk=pk)
 
-    # Limit: 3 downloads per day
-    today = now().date()
-    downloads_today = DownloadLog.objects.filter(
-        user=request.user,
-        timestamp__date=today
-    ).count()
+    # Only apply limit for non-librarians
+    if not is_librarian(request.user):
+        today = now().date()
+        downloads_today = DownloadLog.objects.filter(
+            user=request.user,
+            timestamp__date=today
+        ).count()
 
-    if downloads_today >= 3:
-        messages.error(request, "🚫 You’ve reached your daily limit of 3 downloads.")
-        return redirect('pdf_list')
+        if downloads_today >= 3:
+            messages.error(request, "🚫 You’ve reached your daily limit of 3 downloads.")
+            return redirect('pdf_list')
 
-    # Log download
+    # Log the download
     DownloadLog.objects.create(
         user=request.user,
         pdf=pdf,
         ip_address=get_client_ip(request)
     )
 
-    # Force download with proper headers
+    # Force file download
     file_path = pdf.pdf_file.path
     if not os.path.exists(file_path):
         raise Http404("File not found.")
@@ -201,6 +210,40 @@ def download_pdf(request, pk):
         as_attachment=True,
         filename=os.path.basename(file_path)
     )
+
+# this gives limited download for both librarian and reader
+# @login_required
+# def download_pdf(request, pk):
+#     pdf = get_object_or_404(PDFBook, pk=pk)
+
+#     # Limit: 3 downloads per day
+#     today = now().date()
+#     downloads_today = DownloadLog.objects.filter(
+#         user=request.user,
+#         timestamp__date=today
+#     ).count()
+
+#     if downloads_today >= 3:
+#         messages.error(request, "🚫 You’ve reached your daily limit of 3 downloads.")
+#         return redirect('pdf_list')
+
+#     # Log download
+#     DownloadLog.objects.create(
+#         user=request.user,
+#         pdf=pdf,
+#         ip_address=get_client_ip(request)
+#     )
+
+#     # Force download with proper headers
+#     file_path = pdf.pdf_file.path
+#     if not os.path.exists(file_path):
+#         raise Http404("File not found.")
+
+#     return FileResponse(
+#         open(file_path, 'rb'),
+#         as_attachment=True,
+#         filename=os.path.basename(file_path)
+#     )
 
 
 
@@ -229,9 +272,29 @@ def signup_view(request):
     if request.method == 'POST':
         form = SimpleUserCreationForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Account created! You can now log in.')
-            return redirect('login')
+            user = form.save()  # `role` handled inside form.save()
+            login(request, user)
+            return redirect('book_list')
     else:
         form = SimpleUserCreationForm()
     return render(request, 'registration/signup.html', {'form': form})
+
+@user_passes_test(is_librarian)
+def report_panel(request):
+    today = now().date()
+    month_start = today.replace(day=1)
+    week_ago = today - timedelta(days=7)
+
+    downloads_this_month = DownloadLog.objects.filter(timestamp__date__gte=month_start).count()
+
+    top_viewed = DownloadLog.objects.values('pdf__title') \
+        .annotate(total=Count('pdf')) \
+        .order_by('-total')[:5]
+
+    new_uploads = PDFBook.objects.filter(uploaded_at__date__gte=week_ago).count()
+
+    return render(request, 'report_panel.html', {
+        'downloads_this_month': downloads_this_month,
+        'top_viewed': top_viewed,
+        'new_uploads': new_uploads
+    })

@@ -16,6 +16,8 @@ urlpatterns = [
     path('pdfs/delete/<int:pk>/', views.pdf_delete, name='pdf_delete'),
     path('pdfs/download/<int:pk>/', views.download_pdf, name='download_pdf'),
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('reports/', views.report_panel, name='report_panel'),
+
 
 
 

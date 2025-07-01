@@ -2,7 +2,15 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<h1 class="mb-4">📊 Top 5 Most Downloaded PDFs</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1>📊 Top 5 Most Downloaded PDFs</h1>
+
+  {% if user.groups.first.name == "Librarian" %}
+    <a href="{% url 'report_panel' %}" class="btn btn-outline-info">
+      📈 View Report Panel
+    </a>
+  {% endif %}
+</div>
 
 <div class="card p-4 shadow-sm">
   {% if top_pdfs %}

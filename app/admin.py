@@ -13,3 +13,4 @@ class BookAdmin(admin.ModelAdmin):
     list_filter = ('genre', 'author')
     search_fields = ('title', 'genre')
 
+

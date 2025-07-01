@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}📈 Reports{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">📊 Librarian Report Panel</h2>
+
+<div class="row g-4">
+  <div class="col-md-4">
+    <div class="card text-bg-primary p-3">
+      <h5>This Month's Downloads</h5>
+      <p class="fs-4">{{ downloads_this_month }}</p>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card text-bg-success p-3">
+      <h5>Top 5 Most Viewed PDFs</h5>
+      <ul class="list-group list-group-flush">
+        {% for pdf in top_viewed %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ pdf.pdf__title }}
+            <span class="badge bg-secondary rounded-pill">{{ pdf.total }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card text-bg-warning p-3">
+      <h5>New Uploads This Week</h5>
+      <p class="fs-4">{{ new_uploads }}</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
