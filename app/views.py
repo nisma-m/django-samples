@@ -12,6 +12,10 @@ from django.contrib.auth.decorators import login_required
 from django.http import FileResponse, Http404
 import os
 from django.contrib.auth import login
+import PyPDF2
+from io import BytesIO
+from django.core.files.base import ContentFile
+
  
 def is_librarian(user):
     return user.groups.filter(name='Librarian').exists()
@@ -141,11 +145,26 @@ def upload_pdf(request):
     if request.method == 'POST':
         form = PDFBookForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            instance = form.save(commit=False)
+            uploaded_file = request.FILES['pdf_file']
+            instance.pdf_file = compress_pdf(uploaded_file)  # Compress
+            instance.save()
             return redirect('pdf_list')
     else:
         form = PDFBookForm()
     return render(request, 'pdf_upload.html', {'form': form})
+
+def compress_pdf(pdf_file):
+    reader = PyPDF2.PdfReader(pdf_file)
+    writer = PyPDF2.PdfWriter()
+
+    for page in reader.pages:
+        writer.add_page(page)
+
+    compressed_stream = BytesIO()
+    writer.write(compressed_stream)
+    compressed_stream.seek(0)
+    return ContentFile(compressed_stream.read(), name=pdf_file.name)
 
 
 def pdf_list(request):
@@ -298,4 +317,11 @@ def report_panel(request):
         'downloads_this_month': downloads_this_month,
         'top_viewed': top_viewed,
         'new_uploads': new_uploads
+
+    })
+
+def pdf_viewer(request, pk):
+    pdf = get_object_or_404(PDFBook, pk=pk)
+    return render(request, 'pdf_viewer.html', {
+        'pdf_url': pdf.pdf_file.url  # this must resolve to a working file
     })

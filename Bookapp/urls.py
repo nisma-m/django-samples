@@ -29,6 +29,7 @@ urlpatterns = [
 
     # Your app's URLs (must be below root path)
     path('app/', include('app.urls')),
+    path('auth/', include('social_django.urls', namespace='social'))
 ]
-
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

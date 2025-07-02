@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}PDF Library{% endblock %}
+
 {% block content %}
 <h1 class="mb-4 d-flex justify-content-between align-items-center">
   📚 Uploaded PDFs
@@ -14,7 +15,6 @@
     </div>
   {% endfor %}
 {% endif %}
-
 
 <form method="get" class="mb-3">
   <input type="text" name="q" class="form-control" placeholder="🔍 Search by title or author" value="{{ request.GET.q }}">
@@ -43,10 +43,17 @@
           {% endwith %}
         </td>
         <td>
-          <a href="{{ pdf.pdf_file.url }}" class="btn btn-sm btn-info" target="_blank">📖 View</a>
-          <!-- <a href="{{ pdf.pdf_file.url }}" class="btn btn-sm btn-success" download>⬇️ Download</a> -->
-          <a href="{% url 'download_pdf' pdf.id %}" class="btn btn-sm btn-success">⬇️ Download</a>
-          <a href="{% url 'pdf_delete' pdf.id %}" class="btn btn-sm btn-danger">🗑️ Delete</a>
+          <a href="{% url 'pdf_viewer' pdf.id %}" class="btn btn-sm btn-info">📖 View</a>
+          
+          {% if user.is_authenticated %}
+            <a href="{% url 'download_pdf' pdf.id %}" class="btn btn-sm btn-success">⬇️ Download</a>
+          {% else %}
+            <a href="{% url 'login' %}?next={% url 'pdf_list' %}" class="btn btn-sm btn-warning">🔐 Login to Download</a>
+          {% endif %}
+
+          {% if user.groups.all.0.name == "Librarian" %}
+            <a href="{% url 'pdf_delete' pdf.id %}" class="btn btn-sm btn-danger">🗑️ Delete</a>
+          {% endif %}
         </td>
       </tr>
       {% empty %}

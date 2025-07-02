@@ -37,7 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'app'
+    'app',
+    'social_django'
 ]
 
 MIDDLEWARE = [
@@ -48,6 +49,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'social_django.middleware.SocialAuthExceptionMiddleware',
 ]
 
 ROOT_URLCONF = 'Bookapp.urls'
@@ -127,6 +129,21 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-
+LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'book_list'      # where to go after login
 LOGOUT_REDIRECT_URL = 'login'        # where to go after logout
+
+
+AUTHENTICATION_BACKENDS = (
+    'social_core.backends.google.GoogleOAuth2',
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = 'CLIENT_ID'
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = 'CLIENT_SECRET'
+
+TEMPLATES[0]['OPTIONS']['context_processors'] += [
+    'social_django.context_processors.backends',
+    'social_django.context_processors.login_redirect',
+]

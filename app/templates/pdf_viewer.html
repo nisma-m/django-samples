@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}📄 PDF Preview{% endblock %}
+
+{% block content %}
+<h3 class="mb-3">📄 PDF Preview</h3>
+
+<!-- 📄 Scrollable Canvas Preview -->
+<div class="card p-2 mb-4">
+  <h5>📄 Full PDF Preview (Canvas)</h5>
+  <div id="pdf-scroll-preview" class="d-flex flex-column gap-3 overflow-auto border p-2" style="max-height:400px;"></div>
+</div>
+
+<!-- 📑 Page Thumbnails Section -->
+<div class="card p-3">
+  <h5>📑 Page Thumbnails</h5>
+  <div id="pdf-thumbnails" class="d-flex flex-wrap gap-3"></div>
+</div>
+
+<!-- ✅ PDF.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<!-- 🧑‍💻 Full PDF Canvas Preview Script -->
+<script>
+  const pdfjsLib = window['pdfjsLib'];
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+  const url = "{{ pdf_url|escapejs }}";
+  const container = document.getElementById('pdf-scroll-preview');
+
+  pdfjsLib.getDocument(url).promise.then(pdf => {
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      pdf.getPage(pageNum).then(page => {
+        const scale = 0.8;  // 🔧 Reduced size
+        const viewport = page.getViewport({ scale });
+
+        const canvas = document.createElement('canvas');
+        canvas.classList.add('border');
+        canvas.style.marginBottom = '10px';
+        canvas.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+        const context = canvas.getContext('2d');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        page.render({ canvasContext: context, viewport });
+        container.appendChild(canvas);
+      });
+    }
+  }).catch(err => {
+    console.error("PDF Preview Load Error:", err);
+    container.innerHTML = "<p style='color:red;'>⚠️ Could not render PDF. Check browser console.</p>";
+  });
+</script>
+
+<!-- 🧠 Thumbnails Script -->
+<script>
+  const thumbUrl = "{{ pdf_url|escapejs }}";
+
+  pdfjsLib.getDocument(thumbUrl).promise.then(pdf => {
+    for (let i = 1; i <= pdf.numPages; i++) {
+      pdf.getPage(i).then(page => {
+        const scale = 0.25;  // 📉 Slightly smaller thumbnails
+        const viewport = page.getViewport({ scale });
+
+        const canvas = document.createElement('canvas');
+        canvas.classList.add('border');
+        canvas.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+        const context = canvas.getContext('2d');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        document.getElementById('pdf-thumbnails').appendChild(canvas);
+        page.render({ canvasContext: context, viewport });
+      });
+    }
+  }).catch(err => {
+    console.error("Thumbnail Load Error:", err);
+    document.getElementById('pdf-thumbnails').innerHTML =
+      "<p style='color:red;'>⚠️ Unable to load thumbnails. Check console for details.</p>";
+  });
+</script>
+
+{% endblock %}

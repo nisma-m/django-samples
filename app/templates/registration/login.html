@@ -24,6 +24,12 @@
         <button type="submit" class="btn btn-primary">🔓 Login</button>
       </div>
     </form>
+    <div class="text-center mt-3">
+    <a href="{% url 'social:begin' 'google-oauth2' %}" class="btn btn-outline-danger">
+      🔐 Login with Google
+    </a>
+  </div>
+
 
     <div class="text-center mt-4">
       <small class="d-block mb-2">🔑 <a href="{% url 'password_reset' %}">Forgot your password?</a></small>

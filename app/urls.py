@@ -25,6 +25,11 @@ urlpatterns = [
     path('borrow/return/<int:pk>/', views.mark_returned, name='mark_returned'),
     path('pdfs/', views.pdf_list, name='pdf_list'),
     path('pdfs/download/<int:pk>/', views.download_pdf, name='download_pdf'),
+    path('pdfs/view/<int:pk>/', views.pdf_viewer, name='pdf_viewer'),
+    
+
+
+
 ]
 
 
