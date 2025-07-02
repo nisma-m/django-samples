@@ -58,6 +58,7 @@ def book_create(request):
 
 
 # ✏️ Edit Book
+@user_passes_test(is_librarian)
 def book_update(request, pk):
     book = get_object_or_404(Book, pk=pk)
     if request.method == 'POST':
@@ -247,7 +248,7 @@ def download_pdf(request, pk):
 
 
 
-@login_required
+@user_passes_test(is_librarian)
 def dashboard(request):
     top_pdfs_raw = DownloadLog.objects.values('pdf__title').annotate(
         total=Count('pdf')

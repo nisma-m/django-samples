@@ -40,9 +40,12 @@
           </span>
           
 
-          <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-sm me-2 d-flex align-items-center justify-content-center">
-  📊 Dashboard
-</a>
+          {% if user.groups.all.0.name == "Librarian" %}
+  <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-sm me-2 d-flex align-items-center justify-content-center">
+    📊 Dashboard
+  </a>
+{% endif %}
+
 <a href="{% url 'logout' %}" class="btn btn-outline-warning btn-sm d-flex align-items-center justify-content-center">
   🔒 Logout
 </a>
