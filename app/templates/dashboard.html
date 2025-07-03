@@ -1,37 +1,144 @@
 {% extends 'base.html' %}
-{% block title %}Dashboard{% endblock %}
+{% load custom_tags %}
+{% block title %}📊 Download Dashboard{% endblock %}
+
+
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h1>📊 Top 5 Most Downloaded PDFs</h1>
+<h2 class="mb-4">📊 PDF Download Analytics</h2>
 
-  {% if user.groups.first.name == "Librarian" %}
+{% if user.groups.first.name == "Librarian" %}
+  <div class="mb-3 text-end">
     <a href="{% url 'report_panel' %}" class="btn btn-outline-info">
       📈 View Report Panel
     </a>
-  {% endif %}
+  </div>
+{% endif %}
+
+<!-- Filters -->
+<form method="get" class="row g-3 mb-4">
+  <div class="col-md-4">
+    <label class="form-label">User:</label>
+    <select name="user" class="form-select">
+      <option value="">All</option>
+      {% for u in users %}
+        <option value="{{ u.id }}" {% if request.GET.user == u.id|stringformat:'s' %}selected{% endif %}>
+          {{ u.username }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Start Date:</label>
+    <input type="date" name="start" class="form-control" value="{{ request.GET.start }}">
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">End Date:</label>
+    <input type="date" name="end" class="form-control" value="{{ request.GET.end }}">
+  </div>
+  <div class="col-md-2 d-flex align-items-end">
+    <button type="submit" class="btn btn-primary w-100">Filter</button>
+  </div>
+</form>
+
+<!-- Show selected user -->
+{% if selected_user %}
+  <p><strong>Currently viewing data for:</strong> {{ selected_user.username }}</p>
+{% endif %}
+
+
+
+<!-- Daily Downloads -->
+<div class="card p-4 mb-4">
+  <h5>📅 Daily Downloads</h5>
+  <canvas id="dailyChart"></canvas>
 </div>
 
-<div class="card p-4 shadow-sm">
-  {% if top_pdfs %}
-    {% for pdf in top_pdfs %}
-      <div class="mb-3">
-        <div class="d-flex justify-content-between">
-          <strong>{{ pdf.pdf__title }}</strong>
-          <span class="text-muted">{{ pdf.total }} downloads</span>
-        </div>
-        <div class="progress mt-1" style="height: 20px;">
-          <div class="progress-bar bg-success" role="progressbar"
-               style="width: {{ pdf.percent }}%;"
-               aria-valuenow="{{ pdf.total }}"
-               aria-valuemin="0"
-               aria-valuemax="100">
-          </div>
-        </div>
-      </div>
-    {% endfor %}
-  {% else %}
-    <p class="text-muted">😕 No downloads yet.</p>
-  {% endif %}
+<!-- Weekly Downloads -->
+<div class="card p-4 mb-4">
+  <h5>📈 Last 7 Days</h5>
+  <canvas id="weeklyChart"></canvas>
+</div>
+
+<!-- Top 3 PDFs -->
+<div class="card p-4 mb-4">
+  <h5>🏆 Top 3 Downloaded PDFs</h5>
+  <canvas id="topPdfChart"></canvas>
 </div>
 {% endblock %}
+
+{% block scripts %}
+<!-- Load Chart.js from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  const dailyLabels = {{ daily_labels|safe }};
+  const dailyCounts = {{ daily_counts|safe }};
+  const weeklyLabels = {{ weekly_labels|safe }};
+  const weeklyCounts = {{ weekly_counts|safe }};
+  const topLabels = {{ top_titles|safe }};
+  const topCounts = {{ top_counts|safe }};
+
+  // Daily Chart
+  if (dailyLabels.length && dailyCounts.length) {
+    new Chart(document.getElementById('dailyChart'), {
+      type: 'bar',
+      data: {
+        labels: dailyLabels,
+        datasets: [{
+          label: 'Downloads',
+          data: dailyCounts,
+          backgroundColor: 'rgba(54, 162, 235, 0.6)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  }
+
+  // Weekly Chart
+  if (weeklyLabels.length && weeklyCounts.length) {
+    new Chart(document.getElementById('weeklyChart'), {
+      type: 'line',
+      data: {
+        labels: weeklyLabels,
+        datasets: [{
+          label: 'Weekly Downloads',
+          data: weeklyCounts,
+          fill: false,
+          borderColor: 'rgba(75, 192, 192, 1)',
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  }
+
+  // Top PDFs Chart
+  if (topLabels.length && topCounts.length) {
+  new Chart(document.getElementById('topPdfChart'), {
+    type: 'pie',
+    data: {
+      labels: topLabels,
+      datasets: [{
+        data: topCounts,
+        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
+      }]
+    },
+    options: {
+      responsive: true
+    }
+  });
+}
+
+  
+</script>
+{% endblock %}
+

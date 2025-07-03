@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -43,6 +44,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'cloudinary', 
+    'cloudinary_storage',
     'app',
     'social_django'
 ]
@@ -153,3 +156,22 @@ TEMPLATES[0]['OPTIONS']['context_processors'] += [
     'social_django.context_processors.backends',
     'social_django.context_processors.login_redirect',
 ]
+
+
+
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+
+
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'di8dv6uvb',
+    'API_KEY': '545526846654218',
+    'API_SECRET': 'XxPDKX_-pW9M4Vey7RiiWuGFJn8'
+}
+
+
+CLOUDINARY_STORAGE = {
+    'RESOURCE_TYPE': 'raw'  # optional global default
+}

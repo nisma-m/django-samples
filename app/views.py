@@ -9,14 +9,33 @@ from django.utils.timezone import now
 from django.contrib import messages
 from django.db.models import Count
 from django.contrib.auth.decorators import login_required
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, HttpResponse
 import os
 from django.contrib.auth import login
 import PyPDF2
 from io import BytesIO
 from django.core.files.base import ContentFile
+import requests
+from django.db.models.functions import TruncDate
+from django.contrib.auth.models import User
+from django.shortcuts import render
+from datetime import timedelta
+from django.utils.timezone import now
+import fitz  # PyMuPDF
+from io import BytesIO
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from cloudinary.utils import cloudinary_url
+from django.core.files.uploadedfile import SimpleUploadedFile
+from cloudinary.utils import cloudinary_url
+from cloudinary.uploader import upload as cloudinary_upload
+import re
+from cloudinary.utils import cloudinary_url
+import cloudinary.uploader
+from django.contrib.auth.models import User
 
- 
+
+
+
 def is_librarian(user):
     return user.groups.filter(name='Librarian').exists()
 
@@ -143,28 +162,39 @@ def mark_returned(request, pk):
 @user_passes_test(is_librarian)
 def upload_pdf(request):
     if request.method == 'POST':
-        form = PDFBookForm(request.POST, request.FILES)
-        if form.is_valid():
-            instance = form.save(commit=False)
-            uploaded_file = request.FILES['pdf_file']
-            instance.pdf_file = compress_pdf(uploaded_file)  # Compress
-            instance.save()
+        title = request.POST.get('title')
+        author = request.POST.get('author')
+        pdf_file = request.FILES.get('pdf_file')
+
+        if not title or not author or not pdf_file:
+            messages.error(request, "All fields are required.")
+            return redirect('pdf_upload')
+
+        try:
+            result = cloudinary_upload(
+                pdf_file,
+                resource_type="raw",
+                type="upload",
+                folder="pdfs/",
+                public_id=os.path.splitext(pdf_file.name)[0],
+                overwrite=True
+            )
+
+            PDFBook.objects.create(
+                title=title,
+                author=author,
+                pdf_file=result['secure_url']
+            )
+            messages.success(request, "✅ PDF uploaded successfully.")
             return redirect('pdf_list')
-    else:
-        form = PDFBookForm()
-    return render(request, 'pdf_upload.html', {'form': form})
 
-def compress_pdf(pdf_file):
-    reader = PyPDF2.PdfReader(pdf_file)
-    writer = PyPDF2.PdfWriter()
+        except Exception as e:
+            messages.error(request, f"Upload failed: {e}")
+            return redirect('pdf_upload')
 
-    for page in reader.pages:
-        writer.add_page(page)
+    return render(request, 'upload_pdf.html')
 
-    compressed_stream = BytesIO()
-    writer.write(compressed_stream)
-    compressed_stream.seek(0)
-    return ContentFile(compressed_stream.read(), name=pdf_file.name)
+
 
 
 def pdf_list(request):
@@ -172,20 +202,25 @@ def pdf_list(request):
     pdfs = PDFBook.objects.all()
 
     if query:
-        pdfs = pdfs.filter(title__icontains=query) | pdfs.filter(author__icontains=query)
+        pdfs = pdfs.filter(
+            Q(title__icontains=query) | Q(author__icontains=query)
+        )
 
     return render(request, 'pdf_list.html', {'pdfs': pdfs})
 
 def pdf_delete(request, pk):
     pdf = get_object_or_404(PDFBook, pk=pk)
-    if request.method == 'POST':
-        pdf.pdf_file.delete()
-        pdf.delete()
-        return redirect('pdf_list')
-    return render(request, 'confirm_delete.html', {
-        'object': pdf,
-        'cancel_url': reverse('pdf_list')
-    })
+    
+    public_id = extract_public_id(pdf.pdf_file)
+    if public_id:
+        # Delete file from Cloudinary
+        cloudinary.uploader.destroy(public_id, resource_type='raw')
+    
+    # Delete DB record
+    pdf.delete()
+    
+    return redirect('pdf_list')  # or wherever
+
 
 
 
@@ -197,20 +232,21 @@ def get_client_ip(request):
     return request.META.get("REMOTE_ADDR")
 
 #this is give unlimited download access to librarian and limited for normal
+
+
 @login_required
 def download_pdf(request, pk):
     pdf = get_object_or_404(PDFBook, pk=pk)
 
-    # Only apply limit for non-librarians
+    # Limit daily downloads for non-librarians
     if not is_librarian(request.user):
         today = now().date()
         downloads_today = DownloadLog.objects.filter(
             user=request.user,
             timestamp__date=today
         ).count()
-
         if downloads_today >= 3:
-            messages.error(request, "🚫 You’ve reached your daily limit of 3 downloads.")
+            messages.error(request, "🚫 Daily download limit (3) reached.")
             return redirect('pdf_list')
 
     # Log the download
@@ -220,15 +256,19 @@ def download_pdf(request, pk):
         ip_address=get_client_ip(request)
     )
 
-    # Force file download
-    file_path = pdf.pdf_file.path
-    if not os.path.exists(file_path):
-        raise Http404("File not found.")
+    # Fetch PDF content from Cloudinary
+    try:
+        response = requests.get(pdf.pdf_file, stream=True)
+        response.raise_for_status()
+    except requests.exceptions.RequestException:
+        messages.error(request, "❌ Error downloading file from Cloudinary.")
+        return redirect('pdf_list')
 
-    return FileResponse(
-        open(file_path, 'rb'),
-        as_attachment=True,
-        filename=os.path.basename(file_path)
+    filename = os.path.basename(pdf.pdf_file)
+    return HttpResponse(
+        response.content,
+        content_type='application/pdf',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
     )
 
 # this gives limited download for both librarian and reader
@@ -267,26 +307,79 @@ def download_pdf(request, pk):
 
 
 
-@user_passes_test(is_librarian)
+
+
+@login_required
+@user_passes_test(lambda u: u.groups.filter(name="Librarian").exists())
 def dashboard(request):
-    top_pdfs_raw = DownloadLog.objects.values('pdf__title').annotate(
-        total=Count('pdf')
-    ).order_by('-total')[:5]
+    logs = DownloadLog.objects.all()
 
-    # Get max value for calculating percentage
-    max_total = top_pdfs_raw[0]['total'] if top_pdfs_raw else 1
+    user_id = request.GET.get("user")
+    start_date = request.GET.get("start")
+    end_date = request.GET.get("end")
+    selected_user = None
 
-    # Add percent key to each PDF entry
-    top_pdfs = []
-    for pdf in top_pdfs_raw:
-        percent = int((pdf['total'] / max_total) * 100)
-        top_pdfs.append({
-            'pdf__title': pdf['pdf__title'],
-            'total': pdf['total'],
-            'percent': percent,
-        })
+    if user_id:
+        logs = logs.filter(user_id=user_id)
+        try:
+            selected_user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            selected_user = None
 
-    return render(request, 'dashboard.html', {'top_pdfs': top_pdfs})
+    if start_date and end_date:
+        logs = logs.filter(timestamp__date__range=[start_date, end_date])
+
+    # Daily Downloads
+    daily_downloads = logs.annotate(
+        date=TruncDate("timestamp")
+    ).values("date").annotate(
+        count=Count("id")
+    ).order_by("date")
+
+    # Weekly Downloads (last 7 days)
+    last_7_days = now().date() - timedelta(days=6)
+    weekly_data = logs.filter(
+        timestamp__date__gte=last_7_days
+    ).annotate(
+        date=TruncDate("timestamp")
+    ).values("date").annotate(
+        count=Count("id")
+    ).order_by("date")
+
+    # Top 3 PDFs
+    if user_id:
+        top_pdfs = logs.values("pdf__title").annotate(
+            count=Count("id")
+        ).order_by("-count")[:3]
+    else:
+        top_pdfs = DownloadLog.objects.values("pdf__title").annotate(
+            count=Count("id")
+        ).order_by("-count")[:3]
+
+    top_titles = [item["pdf__title"] for item in top_pdfs]
+    top_counts = [item["count"] for item in top_pdfs]
+
+
+    # Prepare chart data
+    daily_labels = [str(item["date"]) for item in daily_downloads]
+    daily_counts = [item["count"] for item in daily_downloads]
+
+    weekly_labels = [str(item["date"]) for item in weekly_data]
+    weekly_counts = [item["count"] for item in weekly_data]
+
+    top_titles = [item["pdf__title"] for item in top_pdfs]
+    top_counts = [item["count"] for item in top_pdfs]
+
+    return render(request, "dashboard.html", {
+        "daily_labels": daily_labels,
+        "daily_counts": daily_counts,
+        "weekly_labels": weekly_labels,
+        "weekly_counts": weekly_counts,
+        "top_titles": top_titles,
+        "top_counts": top_counts,
+        "users": User.objects.all(),
+        "selected_user": selected_user,
+    })
 
 def signup_view(request):
     if request.method == 'POST':
@@ -320,8 +413,49 @@ def report_panel(request):
 
     })
 
+
+
+# views.py
+
+
+
+def extract_public_id(url):
+    """
+    Extracts the public ID (without extension) from a Cloudinary URL.
+    Example: https://res.cloudinary.com/.../upload/v1/pdfs/example -> 'pdfs/example'
+    """
+    match = re.search(r'/upload/(?:v\d+/)?(.+?)(?:\.pdf)?$', url)
+    if match:
+        return match.group(1)  # public ID without .pdf
+    return None
+
+
+
 def pdf_viewer(request, pk):
     pdf = get_object_or_404(PDFBook, pk=pk)
+
+    public_id = extract_public_id(pdf.pdf_file)
+    if not public_id:
+        return render(request, 'pdf_error.html', {'message': 'Invalid PDF URL'})
+
+    signed_url, _ = cloudinary_url(
+        public_id,
+        resource_type='raw',
+        sign=True,
+        format='pdf',     # 👈 forces .pdf extension in URL
+        secure=True,
+        expiry=300         # optional: link expires in 5 minutes
+    )
+
     return render(request, 'pdf_viewer.html', {
-        'pdf_url': pdf.pdf_file.url  # this must resolve to a working file
+        'pdf': pdf,
+        'pdf_url': signed_url
     })
+
+# Example: downloads/views.py
+@login_required
+def download_logs(request):
+    logs = DownloadLog.objects.select_related('user', 'pdf').order_by('-timestamp')  # fixed
+    return render(request, 'downloads/logs.html', {'logs': logs})
+
+

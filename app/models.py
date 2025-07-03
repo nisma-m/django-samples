@@ -1,6 +1,11 @@
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
+from cloudinary_storage.storage import MediaCloudinaryStorage
+from .storage import RawMediaCloudinaryStorage
+from cloudinary.models import CloudinaryField
+
+
 
 
 
@@ -44,15 +49,30 @@ class Borrower(models.Model):
         return f"{self.name} - {self.book.title}"
 
 
-class PDFBook(models.Model):
-    title = models.CharField(max_length=200)
-    author = models.CharField(max_length=100)
-    pdf_file = models.FileField(upload_to='pdfs/')
-    uploaded_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return self.title
-    
+
+# class PDFBook(models.Model):
+#     title = models.CharField(max_length=200)
+#     author = models.CharField(max_length=100)
+#     pdf_file = models.FileField(
+#         upload_to='pdfs/',
+#         storage=MediaCloudinaryStorage()  # ✅ Cloudinary storage
+#     )
+#     uploaded_at = models.DateTimeField(auto_now_add=True)
+
+#     def __str__(self):
+#         return self.title
+
+
+
+
+class PDFBook(models.Model):
+    title = models.CharField(max_length=255)
+    author = models.CharField(max_length=255)
+    pdf_file = models.URLField()
+    uploaded_at = models.DateTimeField(auto_now_add=True)  # 👈 This auto-fills timestamp
+
+
 class DownloadLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     pdf = models.ForeignKey(PDFBook, on_delete=models.CASCADE)
@@ -61,3 +81,6 @@ class DownloadLog(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.pdf.title} - {self.timestamp}"
+
+    class Meta:
+        ordering = ['-timestamp']

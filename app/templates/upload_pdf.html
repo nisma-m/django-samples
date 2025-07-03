@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Upload PDF{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">➕ Upload PDF</h1>
+
+<!-- ✅ Django messages (shows success/error) -->
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">
+      {{ message }}
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="card p-4 shadow-sm">
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- Title -->
+    <div class="mb-3">
+      <label for="id_title" class="form-label">📌 Title</label>
+      <input type="text" name="title" id="id_title" class="form-control" required>
+    </div>
+
+    <!-- Author -->
+    <div class="mb-3">
+      <label for="id_author" class="form-label">✍️ Author</label>
+      <input type="text" name="author" id="id_author" class="form-control" required>
+    </div>
+
+    <!-- PDF Upload Field (must match 'pdf_file' in view) -->
+    <div class="mb-3">
+      <label for="id_pdf_file" class="form-label">📂 Upload PDF File</label>
+      <input type="file" name="pdf_file" id="id_pdf_file" class="form-control" accept=".pdf" required>
+    </div>
+
+    <!-- Buttons -->
+    <button type="submit" class="btn btn-primary">📤 Upload</button>
+    <a href="{% url 'pdf_list' %}" class="btn btn-secondary">📚 View PDFs</a>
+  </form>
+</div>
+{% endblock %}
