@@ -50,15 +50,17 @@ def book_list(request):
     author_id = request.GET.get('author')
     genre = request.GET.get('genre')
 
-    # Filter books based on author and genre
     if author_id:
         books = books.filter(author_id=author_id)
     if genre:
         books = books.filter(genre__iexact=genre)
 
-    # Exclude books that are currently borrowed (return_date is null)
+    # Get currently borrowed book IDs
     borrowed_books = Borrower.objects.filter(return_date__isnull=True).values_list('book_id', flat=True)
-    books = books.exclude(id__in=borrowed_books)
+
+    # Mark availability for template display
+    for book in books:
+        book.is_available = book.id not in borrowed_books
 
     return render(request, 'book_list.html', {
         'books': books,
@@ -67,7 +69,9 @@ def book_list(request):
     })
 
 
+
 # ➕ Add Book
+@login_required
 @user_passes_test(is_librarian)
 def book_create(request):
     if request.method == 'POST':
@@ -128,6 +132,7 @@ def borrow_book(request):
 
 
 # 📋 List Borrowers
+@user_passes_test(is_librarian)
 def borrower_list(request):
     borrowers = Borrower.objects.all()
 

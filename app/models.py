@@ -26,14 +26,16 @@ class Book(models.Model):
         ('Romance', 'Romance'),
         ('Biography', 'Biography'),
     ]
-    
+
     title = models.CharField(max_length=200)
     published_year = models.IntegerField()
     genre = models.CharField(max_length=50, choices=GENRE_CHOICES)
     author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name='books')
+    available = models.BooleanField(default=True)  # ✅ This line is mandatory
 
     def __str__(self):
         return self.title
+
     
 class Borrower(models.Model):
     name = models.CharField(max_length=100)

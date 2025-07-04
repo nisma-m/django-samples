@@ -31,16 +31,22 @@
     </div>
 
     <div class="col-md-4 d-flex flex-wrap align-items-end">
-      <button type="submit" class="btn btn-primary me-2 mb-2">🔍 Filter</button>
-      {% if user.groups.all.0.name == "Librarian" %}
+  <button type="submit" class="btn btn-primary me-2 mb-2">🔍 Filter</button>
+  
+  {% if user.groups.all.0.name == "Librarian" %}
     <a href="{% url 'book_add' %}" class="btn btn-success me-2 mb-2">➕ Add Book</a>
     <a href="{% url 'pdf_upload' %}" class="btn btn-dark me-2 mb-2">📤 Upload PDF</a>
-      {% endif %}
-      <a href="{% url 'borrow_book' %}" class="btn btn-outline-info me-2 mb-2">📚 Borrow Book</a>
-      
-      <a href="{% url 'pdf_list' %}" class="btn btn-outline-secondary mb-2">📂 View PDFs</a>
-    </div>
-  </form>
+  {% endif %}
+
+  <a href="{% url 'borrow_book' %}" class="btn btn-outline-info me-2 mb-2">📚 Borrow Book</a>
+
+  <!-- ✅ Add this button to go to borrower list -->
+  {% if user.groups.all.0.name == "Librarian" %}
+  <a href="{% url 'borrower_list' %}?book={{ book.id }}" class="btn btn-sm btn-info">👥 View Borrowers</a>
+{% endif %}
+
+
+  <a href="{% url 'pdf_list' %}" class="btn btn-outline-secondary mb-2">📂 View PDFs</a>
 </div>
 
 <div class="card p-4">
@@ -61,8 +67,13 @@
         <td><a href="{% url 'author_detail' book.author.id %}">{{ book.author.name }}</a></td>
         <td>{{ book.genre }}</td>
         <td>
-          <span class="badge bg-success">Available</span>
+          {% if book.is_available %}
+            <span class="badge bg-success">Available</span>
+          {% else %}
+            <span class="badge bg-danger">Not Available</span>
+          {% endif %}
         </td>
+
         <td>
         {% if user.groups.all.0.name == "Librarian" %}
   <a href="{% url 'book_edit' book.id %}" class="btn btn-sm btn-warning">✏️ Edit</a>
