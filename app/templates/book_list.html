@@ -39,10 +39,12 @@
   {% endif %}
 
   <a href="{% url 'borrow_book' %}" class="btn btn-outline-info me-2 mb-2">📚 Borrow Book</a>
+  
 
   <!-- ✅ Add this button to go to borrower list -->
   {% if user.groups.all.0.name == "Librarian" %}
-  <a href="{% url 'borrower_list' %}?book={{ book.id }}" class="btn btn-sm btn-info">👥 View Borrowers</a>
+  <!-- <a href="{% url 'borrower_list' %}?book={{ book.id }}" class="btn btn-sm btn-info">👥 View Borrowers</a> -->
+   <a href="{% url 'borrower_list' %}?book={{ book.id }}" class = "btn btn-outline-info me-2 mb-2">👥 View Borrowers</a>
 {% endif %}
 
 
@@ -57,7 +59,7 @@
         <th>👤 Author</th>
         <th>🏷️ Genre</th>
         <th>📌 Status</th>
-        <th>⚙️ Actions</th>
+        <!-- <th>⚙️ Actions</th> -->
       </tr>
     </thead>
     <tbody>

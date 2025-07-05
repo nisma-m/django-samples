@@ -32,6 +32,9 @@ import re
 from cloudinary.utils import cloudinary_url
 import cloudinary.uploader
 from django.contrib.auth.models import User
+from django.contrib.auth import login
+from django.contrib.auth import get_backends
+
 
 
 
@@ -123,11 +126,12 @@ def author_detail(request, pk):
 
 
 # 📚 Borrow Book
+@login_required
 def borrow_book(request):
     form = BorrowerForm(request.POST or None)
     if form.is_valid():
         form.save()
-        return redirect('borrower_list')
+        return redirect('book_list')
     return render(request, 'borrow_form.html', {'form': form})
 
 
@@ -386,16 +390,32 @@ def dashboard(request):
         "selected_user": selected_user,
     })
 
+# def signup_view(request):
+#     if request.method == 'POST':
+#         form = SimpleUserCreationForm(request.POST)
+#         if form.is_valid():
+#             user = form.save()  # `role` handled inside form.save()
+#             login(request, user)
+#             return redirect('book_list')
+#     else:
+#         form = SimpleUserCreationForm()
+#     return render(request, 'registration/signup.html', {'form': form})
+
+
 def signup_view(request):
     if request.method == 'POST':
         form = SimpleUserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()  # `role` handled inside form.save()
+            user = form.save()
+            # Set backend manually
+            backend = get_backends()[0]  # typically the default backend
+            user.backend = f'{backend.__module__}.{backend.__class__.__name__}'
             login(request, user)
             return redirect('book_list')
     else:
         form = SimpleUserCreationForm()
     return render(request, 'registration/signup.html', {'form': form})
+
 
 @user_passes_test(is_librarian)
 def report_panel(request):
