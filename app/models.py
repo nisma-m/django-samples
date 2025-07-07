@@ -1,12 +1,13 @@
 from django.db import models
 from django.utils import timezone
-from django.contrib.auth.models import User
 from cloudinary_storage.storage import MediaCloudinaryStorage
 from .storage import RawMediaCloudinaryStorage
 from cloudinary.models import CloudinaryField
+from django.contrib.auth import get_user_model
 
 
 
+User = get_user_model()
 
 
 class Author(models.Model):
@@ -75,6 +76,8 @@ class PDFBook(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)  # 👈 This auto-fills timestamp
 
 
+
+
 class DownloadLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     pdf = models.ForeignKey(PDFBook, on_delete=models.CASCADE)
@@ -86,3 +89,4 @@ class DownloadLog(models.Model):
 
     class Meta:
         ordering = ['-timestamp']
+

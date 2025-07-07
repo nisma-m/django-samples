@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'cloudinary', 
     'cloudinary_storage',
+    'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'app',
     'social_django'
 ]
@@ -173,4 +175,15 @@ CLOUDINARY_STORAGE = {
 
 CLOUDINARY_STORAGE = {
     'RESOURCE_TYPE': 'raw'  # optional global default
+
 }
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
+
+
+

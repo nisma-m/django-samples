@@ -18,18 +18,33 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.contrib.auth import views as auth_views  # 👈 add this
+from django.contrib.auth import views as auth_views
+
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
+
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('accounts/', include('django.contrib.auth.urls')),
-    
-    # Show login page on root URL
-    path('', auth_views.LoginView.as_view(), name='login'),
 
-    # Your app's URLs (must be below root path)
-    path('app/', include('app.urls')),
-    path('auth/', include('social_django.urls', namespace='social'))
+    # Web views
+    path('accounts/', include('django.contrib.auth.urls')),  # For login/logout
+    path('app/', include('app.urls')),                       # Web app views
+    path('', auth_views.LoginView.as_view(), name='login'),  # Root login page
+
+    # API endpoints (JWT)
+    path('api/', include('app.api_urls')),                   # ✅ DRF JWT APIs
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+
+    # Social auth (if needed)
+    path('auth/', include('social_django.urls', namespace='social')),
 ]
+
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
