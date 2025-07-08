@@ -1,6 +1,31 @@
 
 from django.contrib import admin
 from .models import Author, Book , Borrower
+from django.contrib.auth.admin import UserAdmin
+from .models import CustomUser
+
+
+@admin.register(CustomUser)
+class CustomUserAdmin(UserAdmin):
+    model = CustomUser
+
+    # Show 'id' in the user list page
+    list_display = ('id', 'username', 'email', 'role', 'is_staff', 'is_active')
+
+    # Do NOT include 'id' in fieldsets because it's not an editable form field
+    fieldsets = (
+        (None, {'fields': ('username', 'email', 'password', 'role')}),
+        ('Permissions', {'fields': ('is_staff', 'is_active', 'groups', 'user_permissions')}),
+        ('Important dates', {'fields': ('last_login', 'date_joined')}),
+    )
+
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('username', 'email', 'role', 'password1', 'password2', 'is_staff', 'is_active')}
+        ),
+    )
+
 
 
 
