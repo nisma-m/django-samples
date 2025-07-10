@@ -52,7 +52,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'app',
-    'social_django'
+    'social_django',
+    'bookapi'
 ]
 
 MIDDLEWARE = [
@@ -185,8 +186,17 @@ CLOUDINARY_STORAGE = {
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
 }
 
+# REST_FRAMEWORK = {
+#     'DEFAULT_AUTHENTICATION_CLASSES': [],
+#     'DEFAULT_PERMISSION_CLASSES': [
+#         'rest_framework.permissions.AllowAny',
+#     ]
+# }
 
 
