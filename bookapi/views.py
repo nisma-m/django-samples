@@ -1,13 +1,19 @@
 from django.shortcuts import render
-from rest_framework import viewsets, status, generics
+from rest_framework import viewsets, status, generics, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.utils import timezone
-from .models import Book, IssuedBook
-from .serializers import BookSerializer, IssueBookSerializer, IssuedBookHistorySerializer
+from .models import Book, IssuedBook, Notification,AdminActivityLog
+from .serializers import (
+    BookSerializer,
+    IssueBookSerializer,
+    IssuedBookHistorySerializer,
+    AdminActivityLogSerializer,
+    NotificationSerializer,
+)
 from django.db.models import Q, F
-from rest_framework import serializers
-from django.db import transaction
+from django.db import transaction 
+from rest_framework import generics, permissions
 
 
 class BookViewSet(viewsets.ModelViewSet):
@@ -15,6 +21,30 @@ class BookViewSet(viewsets.ModelViewSet):
     serializer_class = BookSerializer
     permission_classes = [IsAuthenticated]
 
+    def perform_create(self, serializer):
+        book = serializer.save()
+        AdminActivityLog.objects.create(
+        admin_user=self.request.user,  # ✅ instead of admin=
+        action='book-added',
+        description=f'Book "{book.title}" was added.'
+    )
+
+
+    def perform_update(self, serializer):
+        book = serializer.save()
+        AdminActivityLog.objects.create(
+            admin_user=self.request.user,
+            action='book-updated',
+            description=f'Book "{book.title}" was updated.'
+        )
+
+    def perform_destroy(self, instance):
+        AdminActivityLog.objects.create(
+            admin_user=self.request.user,
+            action='book-deleted',
+            description=f'Book "{instance.title}" was deleted.'
+        )
+        instance.delete()
 
 
 class IssueBookView(generics.CreateAPIView):
@@ -34,13 +64,26 @@ class IssueBookView(generics.CreateAPIView):
         if book.available_copies <= 0:
             return Response({"error": "No available copies"}, status=400)
 
-        # Decrement inside transaction
         book.available_copies -= 1
         book.save()
 
         issued = IssuedBook.objects.create(book=book, user=user)
 
-        # Serialize again to get latest book.available_copies
+        # 📢 Notification for book issue
+        Notification.objects.create(
+            user=user,
+            type='book-issued',
+            message=f'Book "{book.title}" has been issued to you.',
+        )
+        AdminActivityLog.objects.create(
+            admin_user=request.user,
+            action='book-issued',
+            description=f'Book "{book.title}" issued to {user.username}',
+            related_user=user,
+            related_book=book
+        )
+
+
         issued.refresh_from_db()
         serializer = IssueBookSerializer(issued)
         return Response(serializer.data, status=201)
@@ -59,19 +102,28 @@ class ReturnBookView(generics.UpdateAPIView):
         if issued.return_date:
             return Response({"error": "Book already returned"}, status=400)
 
-        # ✅ Set return date
         issued.return_date = timezone.now()
         issued.save()
 
-        # ✅ Increase available copies
-        book = issued.book
-        Book.objects.filter(id=book.id).update(available_copies=F('available_copies') + 1)
+        Book.objects.filter(id=issued.book.id).update(available_copies=F('available_copies') + 1)
+        issued.book.refresh_from_db()
 
-        # Optional: refresh to confirm
-        book.refresh_from_db()
-        print("Updated available copies:", book.available_copies)  # For debug only
+        # 📢 Notification for book return
+        Notification.objects.create(
+            user=request.user,
+            type='book-returned',
+            message=f'Book "{issued.book.title}" has been returned successfully.',
+        )
+
+        AdminActivityLog.objects.create(
+            admin_user=request.user,
+            action='book-returned',
+            description=f'Book "{issued.book.title}" returned by {request.user.username}'
+        )
+
 
         return Response({"message": "Book returned successfully"})
+
 
 class IssuedBookHistoryView(generics.ListAPIView):
     serializer_class = IssuedBookHistorySerializer
@@ -114,3 +166,55 @@ class AdminIssuedBooksView(generics.ListAPIView):
             queryset = queryset.filter(issue_date__range=[start_date, end_date])
 
         return queryset
+
+
+# ✅ Notification Views
+
+class NotificationListView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = NotificationSerializer
+
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user).order_by('-timestamp')
+
+
+class MarkNotificationReadView(generics.UpdateAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = NotificationSerializer
+    queryset = Notification.objects.all()
+
+    def patch(self, request, *args, **kwargs):
+        notification = self.get_object()
+        if notification.user != request.user:
+            return Response({'detail': 'Forbidden'}, status=403)
+        notification.is_read = True
+        notification.save()
+        return Response({'message': 'Marked as read'})
+
+
+class AdminActivityLogListView(generics.ListAPIView):
+    serializer_class = AdminActivityLogSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    def get_queryset(self):
+        queryset = AdminActivityLog.objects.all().order_by('-timestamp')
+
+        admin_id = self.request.query_params.get('admin')
+        action = self.request.query_params.get('action')
+        start = self.request.query_params.get('start')
+        end = self.request.query_params.get('end')
+
+        if admin_id:
+            queryset = queryset.filter(admin_user__id=admin_id)
+
+        if action:
+            queryset = queryset.filter(action=action)
+
+        if start and end:
+            queryset = queryset.filter(timestamp__range=[start, end])
+
+        return queryset
+
+
+
+

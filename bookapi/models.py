@@ -24,3 +24,48 @@ class IssuedBook(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.book.title}"
+    
+
+# models.py
+from django.db import models
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+class Notification(models.Model):
+    NOTIFICATION_TYPES = (
+        ('book-issued', 'Book Issued'),
+        ('book-returned', 'Book Returned'),
+        ('overdue-alert', 'Overdue Alert'),
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    type = models.CharField(choices=NOTIFICATION_TYPES, max_length=20)
+    message = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.type} - {self.user.username}"
+
+
+class AdminActivityLog(models.Model):
+    ACTION_TYPES = (
+        ('add-book', 'Add Book'),
+        ('update-book', 'Update Book'),
+        ('delete-book', 'Delete Book'),
+        ('issue-book', 'Issue Book'),
+        ('return-book', 'Return Book'),
+        ('change-permissions', 'Change Permissions'),
+    )
+    admin_user = models.ForeignKey(User, on_delete=models.CASCADE)
+    action = models.CharField(max_length=50, choices=ACTION_TYPES)
+    description = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    # ✅ Optional fields
+    related_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='related_actions')
+    related_book = models.ForeignKey(Book, on_delete=models.SET_NULL, null=True, blank=True, related_name='book_logs')
+
+
+    def __str__(self):
+        return f"{self.admin_user.username} - {self.action} @ {self.timestamp}"
